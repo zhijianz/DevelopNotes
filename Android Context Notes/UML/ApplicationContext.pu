@@ -1,0 +1,69 @@
+@startuml
+
+participant ActivityThread as at
+participant Instrumentation as ins
+participant Application as app
+participant ContextImpl as ctxImpl
+participant LoadedApk as apk
+
+[-> at : main()
+note left
+  launch a new application
+  main method as the entrance
+  new a ActivityThread for this application as main thread
+end note
+at -> at: new ActivityThread()
+activate at
+
+at -> at: invoke attach() to init ActivityThread
+activate at
+
+at -> ins : new Instrumentation()
+activate ins
+ins --> at : mInstrumentation
+deactivate ins
+
+at -> ctxImpl : craeteAppContext()
+activate ctxImpl
+ctxImpl --> at : context
+deactivate ctxImpl
+
+at -> apk : context.mPackageInfo.makeApplication()
+activate apk
+
+apk -> ctxImpl : craeteAppContext()
+activate ctxImpl
+ctxImpl --> apk : appContext
+deactivate ctxImpl
+
+apk -> ins : mActivityThread.mInstrumentation.newApplication()
+activate ins
+
+ins -> app : new Application()
+activate app
+app --> ins : app
+deactivate app
+
+ins -> app : app.attach();
+activate app
+
+app -> app : attachBaseContext(context)
+app -> ctxImpl : getImpl(context).mPackageInfo
+activate ctxImpl
+ctxImpl --> app : mLoadedApk
+deactivate ctxImpl
+deactivate app
+
+ins --> apk : app
+deactivate ins
+
+apk --> at : mInitalApplication
+deactivate apk
+
+at -> app : mInitalApplication.onCreate()
+deactivate at
+
+at -> at : init main handler
+deactivate at
+
+@enduml

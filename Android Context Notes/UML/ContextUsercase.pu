@@ -1,0 +1,15 @@
+@startuml
+
+actor Context as ctx
+
+left to right direction
+ctx --> (resource) : getResource()
+ctx --> (asset) : getAsset()
+ctx --> (PackageManager) : getPackageManager()
+ctx --> (ApplicationContext) : getApplicationContext()
+ctx --> (ContentResolver) : getContentResolver()
+
+(SystemService) <-- ctx : getSystemService()
+(Broadcast) <-- ctx : sendBraodcast()
+(Activity) <-- ctx : startActivity()
+@enduml
