@@ -22,6 +22,16 @@ ing
 
 [Small项目](https://github.com/wequick/Small)
 
+后续观察
+
 ## 方案4
 
 [Frontia项目](https://github.com/zhijianz/android-dynamical-loading)
+
+遗弃
+
+# Basic Knowledge
+
+1. Context
+2. Resource
+3. Package

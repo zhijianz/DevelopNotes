@@ -1,0 +1,38 @@
+@startuml
+note as wrapperNote
+在ContextWrapper中包含了一个ContextImpl对象
+用来桥接实现所有context需要的功能。所以在
+ContextThemeWrapper中其他的一些特有的属性并
+不是由这个ContextImpl成员实现的
+end note
+
+abstract class Context
+class ContextImpl
+class ContextWrapper
+class ContextThemeWrapper
+class Application
+class Service
+class Activity
+
+note right of ContextImpl
+"PackageInfo
+ResourceManager
+Resource
+ThemeResource
+Theme
+PackageManager"
+end note
+
+ContextWrapper .. wrapperNote
+wrapperNote .. ContextThemeWrapper
+
+Context <|-- ContextImpl
+Context <|-- ContextWrapper
+ContextWrapper .> ContextImpl
+
+ContextWrapper <|-- ContextThemeWrapper
+ContextWrapper <|-- Application
+ContextWrapper <|-- Service
+
+ContextThemeWrapper <|-- Activity
+@enduml

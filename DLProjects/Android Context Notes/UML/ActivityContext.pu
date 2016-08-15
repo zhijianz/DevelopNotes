@@ -1,0 +1,51 @@
+@startuml
+
+participant ActivityThread as at
+participant Instrumentation as ins
+participant ContextImpl as ctxImpl
+participant Activity as act
+
+[-> at : performLaunchActivity()
+note left
+在application创建完成之后
+AMS会调用该函数来创建Activity
+end note
+activate at
+
+at -> ins : mInstrumentation.newActivity()
+note right
+调用该函数创建Activity时，只是利用传入的
+ClassLoader和ClassName调用默认的构造函数
+创建，所以在这个创建的过程中没有进行任何的
+初始化操作
+end note
+activate ins
+ins --> at : activity
+deactivate ins
+
+at -> at : createBaseContextForActivity()
+activate at
+at -> ctxImpl : createActivityContext()
+note right
+在这里只是简单的调用ContextImpl的构造函数创建
+一个ContextImpl对象，和createAppContext()不同的
+只是传入的参数而已，所以在这里并没有实现ContextThemeWrapper
+一些独有的特性，都是后面才加进去的
+end note
+activate ctxImpl
+ctxImpl -> ctxImpl : setOuterContext()
+ctxImpl --> at : appContext
+deactivate ctxImpl
+deactivate at
+
+at -> act : attach()
+note right
+"init the activity include base context"
+end note
+activate act
+act -> act : attachBaseContext()
+deactivate act
+at -> act : 初始化主题相关内容
+at -> act : 调用生命周期函数
+deactivate at
+@enduml
