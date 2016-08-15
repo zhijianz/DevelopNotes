@@ -1,0 +1,26 @@
+@startuml
+participant ContextImpl as ctx
+participant PackageInfo as pi
+participant ActivityThread as at
+
+group get resource by context
+[-> ctx : getResource()
+activate ctx
+[<- ctx : mResource
+deactivate ctx
+end
+
+group init context resource
+ctx -> ctx : init()
+activate ctx
+ctx -> pi : mPackageInfo.getResource()
+activate pi
+pi -> at : mainTread.getTopLevelResource(mResDir, this)
+activate at
+at --> pi : mResources
+deactivate at
+pi --> ctx : mResources
+deactivate pi
+deactivate ctx
+end
+@enduml

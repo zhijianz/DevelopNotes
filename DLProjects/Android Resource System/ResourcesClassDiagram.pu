@@ -1,0 +1,46 @@
+@startuml
+
+class AttributeSet
+class TypedArray
+class AssetManager
+class Resource
+
+top to bottom direction
+
+note right of AssetManager
+可以访问res路径下的所有资源
+..
+通过resource访问获取资源的行为
+实际上都是桥接到AssetManager中
+完成
+end note
+
+TypedArray ..> AttributeSet
+AssetManager <.. Resource
+
+class asset{
+  原生资源文件，在打包
+  编译的时候不会做任何
+  的处理直接放入APK
+}
+class res{
+  ..内容..
+  animator, anim ,color,
+  drawable, layout, menu,
+  raw, values, xml
+  ..raw..
+  raw在处理形式上和asset差不多，
+  区别只是在于raw可以通过id访问
+  ..字符串资源池..
+  上述的文本文件编译成二进制后，
+  会共享一个字符串资源池
+  ..resource.arsc..
+  每一个资源名称、类型、值、ID
+  以及所配置的维度信息。服务于
+  资源匹配算法
+}
+
+Resource --> asset
+Resource --> res
+
+@enduml
