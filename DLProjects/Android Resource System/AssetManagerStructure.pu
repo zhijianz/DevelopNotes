@@ -1,0 +1,32 @@
+@startuml
+package "AssetManager Class Structure Diagram" <<Frame>> {
+  class ContextImpl {
+    - Resources mResources
+    + Resources getResources()
+    + AssetManager getAssets()
+  }
+
+  class Resources {
+    - AssetManager_Java mAssets
+    - Resources mSystem
+    + AssetManager_Java getAssets()
+    + Resources getSystem()
+  }
+
+  class AssetManager_Java {
+    - AssetManager_Java sSystem
+    - int mObject
+    + AssetManager_Java getSystem()
+  }
+
+  class AssetManager_Cpp {
+    - Vector<asset_path> mAssetPaths
+    - ResTable* mResources
+    - ResTable_config* mConfig
+  }
+
+  ContextImpl *-> Resources
+  Resources <|--> AssetManager_Java
+  AssetManager_Cpp <-* AssetManager_Java
+}
+@enduml
