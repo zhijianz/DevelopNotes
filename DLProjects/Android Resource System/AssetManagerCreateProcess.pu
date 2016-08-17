@@ -1,0 +1,57 @@
+@startuml
+participant ContextImpl
+participant LoadedApk
+participant ActivityThread
+participant Resources
+participant AssetManager_Java
+participant AssetManager_Cpp
+
+[-> ContextImpl : init()
+activate ContextImpl
+note left
+init的过程会从传入的参数获取到mPackageInfo,mResources
+end note
+
+ContextImpl -> LoadedApk : getResources()
+activate LoadedApk
+note right
+getResources在获取Resources的时候
+首先会去检查本地变量mResources是否存在
+如果有则直接返回，否则创建
+这样可以保证resource的单例
+end note
+
+LoadedApk -> ActivityThread : getTopLevelResource()
+activate ActivityThread
+note right
+本地会有一个
+HashMap<ResourcesKey, WeakReference<Resources> > mActiveResources
+用来保存已经创建的资源，ResourcesKey可以等同为资源的路径
+会优先从这个缓存中进行查找，找不到在进行创建
+end note
+
+ActivityThread -> AssetManager_Java : new()
+activate AssetManager_Java
+AssetManager_Java -> AssetManager_Java : addAssetPath()
+note right
+创建一个新的AssetManager并且添加资源路径
+end note
+AssetManager_Java --> ActivityThread : assets
+deactivate AssetManager_Java
+
+ActivityThread -> Resources : new()
+activate Resources
+Resources --> ActivityThread : resources
+deactivate Resources
+note right
+resources创建完成之后
+通过一段线程安全的代码将其添加到缓存
+最后再进行返回
+end note
+
+ActivityThread --> LoadedApk : resources
+deactivate ActivityThread
+
+LoadedApk --> ContextImpl : resources
+deactivate LoadedApk
+@enduml
