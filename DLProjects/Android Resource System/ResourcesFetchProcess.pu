@@ -1,0 +1,24 @@
+@startuml
+participant ApplicationContext as ap
+participant Resources
+participant AssetManager
+participant APK
+
+== 获取资源的流程 ==
+[-> ap : fetchResources
+activate ap
+ap -> Resources : ResourcesID
+activate Resources
+Resources -> AssetManager : FileName
+note right
+资源ID和文件名称的对应关系被
+打包在Apk中resources.arsc文
+件中，所以这个转换的过程同样
+需要依赖AssetManager来完成
+end note
+deactivate Resources
+activate AssetManager
+ap -> AssetManager : FileName
+AssetManager -> APK : open
+deactivate ap
+@enduml
