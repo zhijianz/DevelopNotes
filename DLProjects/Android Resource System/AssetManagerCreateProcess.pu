@@ -1,4 +1,6 @@
 @startuml
+autonumber
+
 participant ContextImpl
 participant LoadedApk
 participant ActivityThread
@@ -32,12 +34,26 @@ end note
 
 ActivityThread -> AssetManager_Java : new()
 activate AssetManager_Java
-AssetManager_Java -> AssetManager_Java : addAssetPath()
+AssetManager_Java -> AssetManager_Java : init()
+
+AssetManager_Java -> AssetManager_Cpp : addDefaultAssets()
+note right
+在这里添加的默认路径是系统资源路径
+/system/framework/framework-res.apk
+end note
+activate AssetManager_Cpp
+AssetManager_Cpp -> AssetManager_Cpp : addAssetPath
+AssetManager_Cpp --> AssetManager_Java : AssetManager_Cpp
+deactivate AssetManager_Cpp
+
+AssetManager_Java -> AssetManager_Java : ensureSystemAssets()
 note right
 创建一个新的AssetManager并且添加资源路径
 end note
 AssetManager_Java --> ActivityThread : assets
 deactivate AssetManager_Java
+
+ActivityThread -> AssetManager_Java : addAssetPath()
 
 ActivityThread -> Resources : new()
 activate Resources
