@@ -34,16 +34,29 @@ end note
 
 ActivityThread -> AssetManager_Java : new()
 activate AssetManager_Java
-AssetManager_Java -> AssetManager_Java : init()
+AssetManager_Java -> AssetManager_Cpp : init()
+activate AssetManager_Cpp
 
-AssetManager_Java -> AssetManager_Cpp : addDefaultAssets()
+AssetManager_Cpp -> AssetManager_Cpp : new()
+activate AssetManager_Cpp
+
+AssetManager_Cpp -> AssetManager_Cpp : addDefaultAssets()
 note right
 在这里添加的默认路径是系统资源路径
 /system/framework/framework-res.apk
 end note
 activate AssetManager_Cpp
+
 AssetManager_Cpp -> AssetManager_Cpp : addAssetPath
+deactivate AssetManager_Cpp
+deactivate AssetManager_Cpp
+
 AssetManager_Cpp --> AssetManager_Java : AssetManager_Cpp
+note right
+创建并初始化的C++层AssetMnagager会保存在
+AssetManager_Java中的mObject对象中用于后
+续的JNI调用
+end note
 deactivate AssetManager_Cpp
 
 AssetManager_Java -> AssetManager_Java : ensureSystemAssets()
@@ -54,9 +67,32 @@ AssetManager_Java --> ActivityThread : assets
 deactivate AssetManager_Java
 
 ActivityThread -> AssetManager_Java : addAssetPath()
+AssetManager_Java -> AssetManager_Cpp : addAssetPath()
+note right
+在这个地方出入apk的路径从而保证可以正确的
+找到需要的资源
+end note
 
 ActivityThread -> Resources : new()
 activate Resources
+Resources -> Resources : updateConfiguration()
+activate Resources
+Resources -> AssetManager_Java : setConfiguration()
+activate AssetManager_Java
+AssetManager_Java -> AssetManager_Cpp : setConfiguration()
+deactivate AssetManager_Java
+note right
+在这个地方最后会调用C++的代码进行配置的保存
+主要的保存内容在Configuration和DisplayMatrics
+从而可以根据当前设备的配置信息获取到正确的资源
+end note
+deactivate Resources
+Resources -> AssetManager_Java : ensureStringBlocks()
+note right
+在这个函数里面回去确保应用字符串资源池的创建
+创建的过程首先是去复制系统原有的资源的字符串
+资源池，之后才是去加载应用本身的字符串资源池
+end note
 Resources --> ActivityThread : resources
 deactivate Resources
 note right
