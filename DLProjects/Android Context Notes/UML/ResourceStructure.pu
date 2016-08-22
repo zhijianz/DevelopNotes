@@ -1,0 +1,38 @@
+@startuml
+class ContextImpl {
+  - Resource mResource
+  + Resource getResources()
+  + AssetManager getAssets()
+}
+
+class Resource {
+  - AssetManager_Java mAsset
+  - Resource mSystem
+  + AssetManager getAssets()
+  + Resource getSystem()
+}
+
+class AssetManager_Java {
+  - AssetManager_Java sSystem
+  - int mObject
+  + AssetManager_Java getSystem()
+}
+
+class AssetManager_C {
+  - Vetor<asset_path> mAssetPath
+  - ResTable* mResources
+  - ResTable_config* mConfig
+}
+
+note as resManager
+对于一份资源，由这两个
+类通过完成资源的管理
+end note
+
+ContextImpl *-> Resource
+Resource o--> AssetManager_Java
+AssetManager_Java *-->AssetManager_C
+
+Resource .. resManager
+resManager .. AssetManager_Java
+@enduml

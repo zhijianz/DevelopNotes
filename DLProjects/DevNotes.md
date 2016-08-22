@@ -35,3 +35,4 @@ ing
 1. Context
 2. Resource
 3. Package
+4. The process of launch activity
