@@ -1,4 +1,8 @@
 @startuml
+participant Activity
+participant PhoneWindow
+participant PhoneLayoutInflater
+
 participant ApplicationContext as ap
 participant Resources
 participant AssetManager
@@ -21,4 +25,50 @@ activate AssetManager
 ap -> AssetManager : FileName
 AssetManager -> APK : open
 deactivate ap
+deactivate AssetManager
+
+== Inflate过程 ==
+[-> Activity : setContentView()
+activate Activity
+
+Activity -> PhoneWindow : setContentView()
+activate PhoneWindow
+
+alt mContentParent == null
+PhoneWindow -> PhoneWindow : installDecor()
+else
+PhoneWindow -> PhoneWindow : mContentParent.removeAllViews()
+end alt
+PhoneWindow -> PhoneLayoutInflater : inflate()
+activate PhoneLayoutInflater
+
+group 资源查找部分
+PhoneLayoutInflater -> Resources : getLayout()
+activate Resources
+
+Resources -> Resources : loadXmlResourceParser()
+activate Resources
+
+Resources -> Resources : getValue()
+note right
+getValue 查找资源找出来的结果保存在一个
+TypedValue 对象中，因为对于有文件类型的
+资源来说，资源ID映射到的都是一个文件名称
+，所以这里返回的数据类型应该是string，如
+果不是则会抛出一个NoteFound的异常
+end note
+
+alt value.type == TypedValue.TYPE_STRING
+Resources -> Resources : loadXmlResourceParser()
+else
+Resources -> Resources : throw NotFoundException
+end alt
+
+
+Resources --> PhoneLayoutInflater : XmlResourceParser
+deactivate Resources
+end group
+
+PhoneLayoutInflater -> PhoneLayoutInflater : inflate()
+
 @enduml
