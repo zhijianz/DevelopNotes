@@ -6,6 +6,7 @@ participant PhoneLayoutInflater
 participant ApplicationContext as ap
 participant Resources
 participant AssetManager
+participant AssetManager_Cpp
 participant APK
 
 == 获取资源的流程 ==
@@ -62,10 +63,19 @@ activate Resources
 Resources -> AssetManager : getResourceValue()
 activate AssetManager
 
-AssetManager -> AssetManager : TypedValue:loadResourceValue()
+AssetManager -> AssetManager : loadResourceValue()
 activate AssetManager
 
-AssetManager --> AssetManager : index of StringBlack
+AssetManager -> AssetManager_Cpp : loadResourceValue()
+activate AssetManager_Cpp
+note right
+这一部分的内容和资源打包编译的过程牵扯太大
+暂时没有办法太过详细的理解，只能够后面补完
+知识点内容之后再去学习
+end note
+
+AssetManager_Cpp --> AssetManager : index of StringBlack
+deactivate AssetManager_Cpp
 deactivate AssetManager
 note right
 在这里返回一个索引值用来确定在哪一个资源索引表中
