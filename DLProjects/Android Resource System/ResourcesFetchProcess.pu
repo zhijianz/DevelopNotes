@@ -57,6 +57,31 @@ TypedValue 对象中，因为对于有文件类型的
 ，所以这里返回的数据类型应该是string，如
 果不是则会抛出一个NoteFound的异常
 end note
+activate Resources
+
+Resources -> AssetManager : getResourceValue()
+activate AssetManager
+
+AssetManager -> AssetManager : TypedValue:loadResourceValue()
+activate AssetManager
+
+AssetManager --> AssetManager : index of StringBlack
+deactivate AssetManager
+note right
+在这里返回一个索引值用来确定在哪一个资源索引表中
+可以获取到ID对应的资源，获取字符串代码如下：
+outValue.string = mStringBlocks[index].get(outValue.data)
+end note
+
+AssetManager --> Resources : Bool:found
+deactivate AssetManager
+
+alt found == ture
+Resources -> Resources : return the TypedValue
+else
+Resources -> Resources : throw NotFoundException
+end alt
+deactivate Resources
 
 alt value.type == TypedValue.TYPE_STRING
 Resources -> Resources : loadXmlResourceParser()

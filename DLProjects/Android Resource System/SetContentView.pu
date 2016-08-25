@@ -1,0 +1,19 @@
+@startuml
+participant Activity
+participant PhoneWindow
+participant PhoneLayoutInflater
+
+autonumber
+[-> Activity : setContentView()
+activate Activity
+Activity -> PhoneWindow : setContentView()
+activate PhoneWindow
+
+alt mContentParent == null
+PhoneWindow -> PhoneWindow : installDecor()
+else
+PhoneWindow -> PhoneWindow : mContentParent.removeAllViews()
+end
+
+PhoneWindow -> PhoneLayoutInflater : inflate()
+@enduml
