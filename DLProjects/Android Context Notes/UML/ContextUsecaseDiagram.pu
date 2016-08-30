@@ -1,13 +1,12 @@
 @startuml
+skinparam backgroundColor white
+
+title Context用例图
 
 actor Context as ctx
 
 left to right direction
 ctx --> (resource) : getResource()
-note left
-mResource = mPackageInfo.getResource(mMainThread);
-每个应用只有一个pakcageinfo
-end note
 ctx --> (asset) : getAsset()
 ctx --> (PackageManager) : getPackageManager()
 ctx --> (ApplicationContext) : getApplicationContext()

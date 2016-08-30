@@ -1,0 +1,86 @@
+@startuml
+title Context 类结构图
+
+abstract class Context{
+  +{abstract} AssetManager getAssets()
+  +{abstract} Resources getResources()
+  +{abstract} PackageManager getPackageManager()
+  +{abstract} ContentResolver getContentResolver()
+  +{abstract} Looper getMainLooper()
+  +{abstract} Context getApplicationContext()
+}
+
+class ContextImpl{
+  ~ final ActivityThread mMainThread
+  ~ final LoadedApk mPackageInfo
+  - final Resources mResources
+  - Context mOuterContext
+  - PackageManager mPackageManager
+
+  + AssetManager getAssets()
+  + Resources getResources()
+  + PackageManager getPackageManager()
+  + ContentResolver getContentResolver()
+  + Looper getMainLooper()
+  + Context getApplicationContext()
+}
+
+class ContextWrapper{
+  ~ Context mBase
+  # void attachBaseContext()
+}
+
+class ContextThemeWrapper{
+  - int mThemeResource
+  - Resources.Theme mTheme
+  - LayoutInflate mInflate
+
+  + void setTheme(int resid)
+}
+
+class Application{
+  + LoadedApk mLoadedApk
+  + void attach(Context context)
+}
+class Service
+class Activity
+class AssetManager
+
+class Resources{
+  ~ final AssetManager mAssets
+  ~ final DisplayMetrics mMetrics
+  - final Configuration mConfiguration
+
+  + bool getBoolean(int resid)
+  + int getInteger(int resid)
+  + float getFloat(int resid)
+}
+
+class ApplicationPackageManager{
+  - final ContextImpl mContext
+  - final IPackageManager mPM
+
+  + PackageInfo getPackageInfo(String packageName, int flags)
+  + ApplicationInfo getApplicationInfo(String packageName, int flags)
+  + ActivityInfo getActivityInfo(ComponentName className, int flags)
+  + ActivityInfo getReceiverInfo(ComponentName className, int flags)
+  + ServiceInfo getServiceInfo(ComponentName className, int flags)
+}
+
+abstract class PackageManager
+
+Context <|-- ContextImpl
+Context <|-- ContextWrapper
+ContextWrapper .> ContextImpl
+
+ContextWrapper <|-- ContextThemeWrapper
+ContextWrapper <|-- Application
+ContextWrapper <|-- Service
+
+ContextThemeWrapper <|-- Activity
+
+ContextImpl ..> Resources
+Resources ..> AssetManager
+ContextImpl .> ApplicationPackageManager
+ApplicationPackageManager -|> PackageManager
+@enduml

@@ -45,4 +45,7 @@ note as res
 文件resources.arsc
 end note
 res .. Res
+
+AndroidResources <|-- Asset
+AndroidResources <|-- Res
 @enduml
