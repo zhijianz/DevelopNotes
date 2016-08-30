@@ -1,0 +1,48 @@
+@startuml
+class AndroidResources{
+  Android应用程序的资源可以分为
+  Asset和Res两种
+}
+
+class Assets{
+  1. 放置在项目assets目录下
+  2. 存放原始文件会被直接打包到APK
+  3. 没有ID只能通过文件名访问
+  ..访问方式..
+  AssetManager am = getAssets();
+  InputStream is = am.open("fileName");
+}
+
+class Res{
+  1. 位于res子目录下
+  2. 大部分文件会被编译
+  3. 都会被赋予ID
+  4. 大致有9中子类型
+  ..子类型..
+  anim/animator/color/
+  drawable/layout/menu/
+  raw/values/xml
+}
+
+class Raw{
+  和Asset一样放置原始文件
+  并且会被直接打包到APK中
+  区别在于Raw可以通过ID访问
+}
+
+AndroidResources <|-- Assets
+AndroidResources <|-- Res
+Res <|-- Raw
+
+note as res
+1. 描述的9中子类型中除了Raw和Bitmap类型
+之外的所有XML文件在编译成二进制的时候
+每个文件都会有一个字符串资源池用来替换
+文件中所使用的字符串
+2. 每个res在编译完成之后都会被分配一个
+常量ID放置在R.java中用于资源的访问
+3. 打包编译完成之后会产生一个资源映射表
+文件resources.arsc
+end note
+res .. Res
+@enduml

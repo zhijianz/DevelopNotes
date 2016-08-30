@@ -36,3 +36,11 @@ ing
 2. Resource
 3. Package
 4. The process of launch activity
+
+# Current Work
+
+## 加载优化
+
+### 两种不同的加载模式
+
+DoLoad 模式针对于一次性显示插件列表的情况

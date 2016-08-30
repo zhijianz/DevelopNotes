@@ -7,3 +7,13 @@
 就像老罗在学习计划中介绍的那样，可以将Android的资源体系分成Resource/Asset两种类型，而实际上就算是Resource访问资源的操作也是通过桥接到AssetManager上实现的大体结构如[资源类结构](/ResourcesClassDiagram.pu)
 
 在资源管理结构中比较重要的几个类的关系图如[AssetManager Structure Class Diagram](/AssetManagerStructure.pu)
+
+# 资源编译打包过程
+
+1. 资源打包流程
+
+![资源打包流程图](./Imgs/ResourcesCompileProcess.png)
+
+2. 资源打包查找流程图
+
+![资源打包查找流程](./Imgs/ResourcesCompile&FetchProcess.png)

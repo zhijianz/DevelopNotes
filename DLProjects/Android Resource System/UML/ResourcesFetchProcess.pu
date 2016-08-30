@@ -104,6 +104,8 @@ Resources --> PhoneLayoutInflater : XmlResourceParser
 deactivate Resources
 end group
 
+group UI创建部分
 PhoneLayoutInflater -> PhoneLayoutInflater : inflate()
+end group
 
 @enduml

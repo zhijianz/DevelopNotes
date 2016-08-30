@@ -1,0 +1,36 @@
+@startuml
+state "解析AndroidManifest文件" as pa
+pa : 获取应用包名并创建ResourceTable
+
+state "添加被引用资源包" as IncludeRes
+IncludeRes : 1. 引用资源包指的是系统资源包
+IncludeRes : 2. 当前程序资源包通过资源ID访问系统资源包内容
+IncludeRes : 3. 资源ID是一个无符号四字节整数，最高字节表示资
+IncludeRes : 源包ID，次高字节表示资源类型ID，最后两个字节表示
+IncludeRes : 资源在该类型下的序列ID
+
+state "收集资源文件" as CollectResFiles
+CollectResFiles : 在这一步中会将待编译的XML文件收集放置在
+CollectResFiles : AaptAsset.mRes中，关于这个结构后补
+
+state "将收集到的资源添加到资源表" as AddToResourceTab
+AddToResourceTab : 将上一步中收集到的资源同步到资源表中
+AddToResourceTab : 但是不包括value类型资源，这种类型需要
+AddToResourceTab : 在编译之后才能保存到资源表中
+
+state "编译Value类资源" as CompileValueRes
+CompileValueRes : 将Value类型资源编译过后如同上一步将其
+CompileValueRes : 保存到资源表中
+
+state "给Bag资源分配ID" as AssignID2Bag
+AssignID2Bag : 拥有专用值得Value资源统称为Bag资源，比如
+AssignID2Bag : 常用的Styleable，这一步会先为这些专用值
+AssignID2Bag : 分配ID
+
+[*] -> pa
+pa -> IncludeRes
+IncludeRes -> CollectResFiles
+CollectResFiles --> AddToResourceTab
+AddToResourceTab -left-> CompileValueRes
+CompileValueRes -left-> AssignID2Bag
+@enduml

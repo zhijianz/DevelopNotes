@@ -16,4 +16,5 @@ PhoneWindow -> PhoneWindow : mContentParent.removeAllViews()
 end
 
 PhoneWindow -> PhoneLayoutInflater : inflate()
+
 @enduml
