@@ -1,4 +1,6 @@
 @startuml
+title Android 资源相关类图
+
 class ContextImpl {
   - Resource mResource
   + Resource getResources()

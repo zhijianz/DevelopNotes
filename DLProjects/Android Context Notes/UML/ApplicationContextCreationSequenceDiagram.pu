@@ -1,4 +1,6 @@
 @startuml
+skinparam bakcgroundColor #ffffff
+title ApplicationContext 创建过程
 
 participant ActivityThread as at
 participant Instrumentation as ins
@@ -6,14 +8,15 @@ participant Application as app
 participant ContextImpl as ctxImpl
 participant LoadedApk as apk
 
+autonumber
 [-> at : main()
+activate at
 note left
   launch a new application
   main method as the entrance
   new a ActivityThread for this application as main thread
 end note
 at -> at: new ActivityThread()
-activate at
 
 at -> at: invoke attach() to init ActivityThread
 activate at

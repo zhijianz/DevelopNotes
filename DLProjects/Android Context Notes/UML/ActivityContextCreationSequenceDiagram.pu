@@ -1,10 +1,14 @@
 @startuml
+skinparam backgroundColor #ffffff
+
+title ActivityContext 创建过程
 
 participant ActivityThread as at
 participant Instrumentation as ins
 participant ContextImpl as ctxImpl
 participant Activity as act
 
+autonumber
 [-> at : performLaunchActivity()
 note left
 在application创建完成之后

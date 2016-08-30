@@ -1,0 +1,13 @@
+@startuml
+class AndroidResources{
+}
+
+class Asset{
+}
+
+class Res{
+}
+
+AndroidResources <|-- Asset
+AndroidResources <|-- Res
+@enduml
