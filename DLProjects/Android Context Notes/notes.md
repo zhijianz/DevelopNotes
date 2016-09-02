@@ -122,7 +122,7 @@ public static void main(String[] args) {
 
 ### Setp3:ActivityThread.attach()
 
-应为在`ActivityThread`中并没有去做什么和`Context`相关的内容，所以我们在这里就直接跳到step3
+因为在`ActivityThread`构造函数中并没有去做什么和`Context`相关的内容，所以我们在这里就直接跳到step3
 
 ```Java
 ...
@@ -328,7 +328,9 @@ private Context createBaseContextForActivity(ActivityClientRecord r, final Activ
   ...
 	return baseContext;
 }
+```
 
+```java
 static ContextImpl createActivityContext(ActivityThread mainThread,
 		LoadedApk packageInfo, int displayId, Configuration overrideConfiguration) {
 	if (packageInfo == null) throw new IllegalArgumentException("packageInfo");
