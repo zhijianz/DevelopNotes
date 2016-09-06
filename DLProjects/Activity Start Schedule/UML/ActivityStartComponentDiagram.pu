@@ -1,0 +1,25 @@
+@startuml
+frame "Current Application" {
+  [C.ActivityThread]
+  [C.ApplicationThread]
+}
+
+frame "System Thread" {
+  [ActivityManagerService]
+  [ActivityStack]
+}
+
+frame "New Application" {
+  [N.ActivityThread]
+  [N.ApplicationThread]
+}
+
+[C.ApplicationThread] --> [ActivityManagerService] : 1.start an activity
+[ActivityManagerService] -> [ActivityStack] : 2.prepare for start an activity
+[C.ApplicationThread] <-- [ActivityStack] : 3.prepare for start an activity
+[C.ApplicationThread] --> [ActivityManagerService] : 4.check to create new process
+[ActivityManagerService] --> [C.ApplicationThread] : 5.1 scheduleStartActivity
+[C.ApplicationThread] -> [C.ActivityThread] : 6.1 performLaunchActivity
+[ActivityManagerService] --> [N.ApplicationThread] : 5.2 scheduleStartActivity
+[N.ApplicationThread] -> [N.ActivityThread] : 6.2 performLaunchActivity
+@enduml

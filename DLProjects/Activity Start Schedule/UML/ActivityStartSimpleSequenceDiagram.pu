@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor #ffffff
+
+participant ActivityManagerService as AMS
+participant ActivityStack as AS
+participant ApplicationThread as AppT
+participant ActivityThread as AT
+
+autonumber
+[-> AMS : startActivity
+activate AMS
+AMS -> AS : startActivityMayWait
+deactivate AMS
+activate AS
+
+AS -> AppT : schedulePauseActivity
+deactivate AS
+activate AppT
+
+AppT -> AMS : activityPause
+deactivate AppT
+activate AMS
+
+AMS -> AMS : startProcessLocked
+AMS -> AppT : scheduleLaunchActivity
+deactivate AMS
+
+activate AppT
+AppT -> AT : performLaunchActivity
+deactivate AppT
+@enduml
