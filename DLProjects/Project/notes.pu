@@ -1,0 +1,3 @@
+@startuml
+ContextImpl.obtainStyledAttributes --> Context.obtainStyledAttributes
+@enduml
