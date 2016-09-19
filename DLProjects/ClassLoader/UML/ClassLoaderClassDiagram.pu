@@ -1,0 +1,16 @@
+@startuml
+class BaseClassLoader{
+  - final Element[] dexElements
+}
+
+class DexClassLoader{
+
+}
+
+class Element{
+
+}
+
+BaseClassLoader <|-- DexClassLoader
+BaseClassLoader <- Element
+@enduml

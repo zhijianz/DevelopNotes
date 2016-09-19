@@ -83,3 +83,82 @@ public TypedArray obtainStyledAttributes(AttributeSet set,
 ```
 
 分析上面的代码，`TypedArray`来自于`mTheme`的创建，而`mTheme`的来源有两种不同的路径。对于`Activity`来说，在创建的某个阶段就会创建自己的主题，这个主题中携带的资源对象是主程序的；另外一种来源是通过`ContextImpl.mResources`对象进行创建，在之前有提到过插件自定义的`Context`只是重写了`getResources`方法返回正确的资源对象并没有对`mResources`变量进行改动，所以上面的源码中可以分析解决`ResourcesNotFound`错误有两个地方需要去更改，一个是`Activity.mTheme`另外一个则是`ContextImpl.mResources`。现在项目里对于这个问题，前者是直接通过反射将其置为`null`，后者则是通过反射设置成插件的资源对象。
+
+## ViewPager.setAdapter出现问题
+
+### 现状
+
+ViewPager.setAdapter之后没有任何的内容，如果加入断电调试直接会出现一个因setAdapter时没有成功注册观察者而导致的错误状态崩溃
+
+### 猜测
+
+1. 可能和使用的是FragmentPagerAdapter有关系，尝试换成普通的View之后再进行测试。
+
+实际上和PagerAdapter的类型没有太大的关系，即使换成了普通的PagerAdapter也依然会出现这个问题
+
+2. register 失败的原因猜测可能是List声明的Type和实际加进去的Type使用了不同的类加载器
+
+## 启动照片浏览的时候会出现`Bad Magic Number for Bundle`
+
+## ViewPager.setOffscreenLimit
+
+## ViewPager.getAdapter == null
+
+ E/[bibu]: no application!!!! can't be
+ 插件构建出来的时候没有application
+
+
+ # DroidPlugin
+
+## 代码分析
+
+ ```{puml}
+ class PluginManager{
+   + bool isConnected()
+   + PackageInfo getPackageInfo(String packageName, int flag)
+   + void isntallPackage(String packageName, int flag)
+   + List<PackageInfo> getInstalledPackages(int flag)
+ }
+
+ class IPackageManagerImpl{
+   插件功能具体实现类
+ }
+
+ note top of PluginManager:API 提供层
+
+ class PluginHelper{
+   + void applicationOnCreate(Context baseContext)
+ }
+
+ class PluginPackageParse
+
+ class PluginPatchManager{
+
+ }
+
+ class PluginProcessMnager{
+
+ }
+ ```
+
+```java
+ApkItem item = ...
+PackageManager pm = getPackageManager();
+Intent intent = pm.getLaunchIntentForPackage(item.packageinfo.packagename);
+intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+startActivity(intent);
+```
+
+### 插件安装流程
+
+```{puml}
+participant IPackageManagerImpl as ip
+
+[-> ip: installPackage
+
+```
+
+上面的代码用于启动一个插件，但是如果希望从插件启动宿主中的一个界面会怎么样。
+
+ ## 问题
+ 1. 每次打开会有一个比较长的加载过程
