@@ -164,4 +164,69 @@ intent 马甲
 end note
 ```
 
+## Storage System
+
+```{puml}
+title Key Classes
+
+class PluginDirHelper{
+  插件根目录：/data/data/Host.PKG/Plugin
+  单个插件根目录：/data/data/Host.PKG/Plugin/Plugin.PKG
+  APK存放路径：/data/data/Host.PKG/Plugin/Plugin.PKG/apk/apk-1.apk
+  数据存放路径：/data/data/Host.PKG/Plugin/Plugin.PKG/data/Plugin.PKG
+  缓存存放路径：/data/data/Host.PKG/Plugin/Plugin.PKG/dalvik-cache
+
+  ..
+  // init plugin storage system   
+  // /data/data/Host.PKG/Plugin
+  - {static} void init(Context context)
+  - {static} String enforceDirExists(File file)
+  // get the base dir for current plugin
+  // /data/data/Host.PKG/Plugin/Plugin.PKG
+  + {static} String makePuginBaseDir(Context context, String packageName)
+  // get the plugin system base dir
+  // /data/data/Host.PKG/Plugin
+  + {static} String getBaseDir(Context context)
+  // get the data dir for plugin assit to Application.dataDir
+  // /data/data/Host.PKG/Plugin/Plugin.PKG/data/Plugin.PKG
+  + {static} String getPluginDataDir(Context context, String packageName)
+  // create dir to save signature get from PackageInfo
+  // /data/data/Host.PKG/Plugin/Plugin.PKG/Signature
+  + {static} String getPluginSignatureDir(Context context, String packageName)
+  // create a file to save signature
+  + {static} String getPluginSignatureFile(String packageName, int index)
+  // get all signature for current plugin
+  + {static} List<String> getPluginSignatureFiles(Context context, String packageName)
+  // create dir to save apk file for current plugin
+  // /data/data/Host.PKG/Plugin/Plugin.PKG/apk
+  + {static} String getPluginApkDir(Context context, String pakcageName)
+  // get plugin apk file name "base-1.apk"
+  // /data/data/Host.PKG/Plugin/Plugin.PKG/apk/base-1.apk
+  + {static} String getPluginApkFile(Context context, String packageName)
+  // create the opt dir for plugin ClassLoader
+  // /data/data/Host.PKG/Plugin/Plugin.PKG/dalvik-cache
+  + {static} String getPluginDalvikCacheDir(Context context, String packageName)
+  // create the native dir to save native library
+  // /data/data/Host.PKG/Plugin/Plugin.PKG/lib
+  + {static} String getNativeLibraryDir(Context context, String packageName)
+  // get the dex file
+  + {static} String getPluginDalvikCacheFile(Context context, String packageName)
+  + {static} String getContextDataDir(Context context)
+  + {static} void cleanOptimizedDirectory(String optimizedDirectory)
+}
+```
+
 ## 留白
+
+
+```{puml}
+title Key Classes
+
+class PluginDirHelper{
+  插件根目录：/data/data/Host.PKG/Plugin
+  单个插件根目录：/data/data/Host.PKG/Plugin/Plugin.PKG
+  APK存放路径：/data/data/Host.PKG/Plugin/Plugin.PKG/apk/apk-1.apk
+  数据存放路径：/data/data/Host.PKG/Plugin/Plugin.PKG/data/Plugin.PKG
+  缓存存放路径：/data/data/Host.PKG/Plugin/Plugin.PKG/dalvik-cache
+}
+```
