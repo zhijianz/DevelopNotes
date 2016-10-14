@@ -8,8 +8,10 @@
 	- [源代码框架](#源代码框架)
 	- [关键流程](#关键流程)
 		- [从服务器拉取插件配置和更新本地插件数据流程](#从服务器拉取插件配置和更新本地插件数据流程)
-		- [本地插件管理流程](#本地插件管理流程)
-		- [插件安装/删除/卸载流程](#插件安装删除卸载流程)
+		- [已安装插件信息恢复流程](#已安装插件信息恢复流程)
+		- [插件预装载流程](#插件预装载流程)
+		- [插件安装流程](#插件安装流程)
+		- [插件实体对应关系](#插件实体对应关系)
 		- [插件运行原理简介](#插件运行原理简介)
 		- [插件状态](#插件状态)
 		- [插件保存方式](#插件保存方式)
@@ -134,10 +136,10 @@ end
 
 在整个流程中，旧版本插件列表(Remote)的校验完成后主要执行的对于插件存储系统中保存的插件文件信息，因为`Plugin/PlugInfo`在最开始的时候就已经被更新掉。此外，整个下载更新的流程对于`Disenable`的插件不会做任何的限制，这个标识只会在插件安装，尝试使用插件的时候产生影响。
 
-### 本地插件管理流程
+### 已安装插件信息恢复流程
 
 ```{puml}
-title 本地插件管理流程
+title  已安装插件信息恢复流程
 
 start
 if( 启动插件的方式 ) then ( preLoad )
@@ -239,9 +241,318 @@ endwhile
 stop
 ```
 
-上图显示的从插件存储系统中恢复已安装插件信息的流程。在流程图中可以看到，这个恢复流程是从`PluginManagerService`启动的时候开始的，然后一只辗转到调用`IPluginManagerImpl.loadAllPlugin()`来执行恢复的具体操作。首先会从插件存储系统的保存目录中进行遍历，从其中找到所有的可能是安装完成的插件。在这里的判断条件有两个，第一是apk目录下必须存在对应的apk文件，第二个点是该插件的目录下除了apk目录之外应该还有其他的文件目录存在。额外增加第二点判断是因为在插件卸载之后仍然会把apk文件保留在原来的目录下面，如果这个时候不增加第二点判断条件，那么就会错误将已经卸载的插件当作安装完成的插件进行加载。
+上图显示的从插件存储系统中恢复已安装插件信息的流程。在流程图中可以看到，这个恢复流程是从`PluginManagerService`启动的时候开始的，然后一只辗转到调用`IPluginManagerImpl.loadAllPlugin()`来执行恢复的具体操作。首先会从插件存储系统的保存目录中进行遍历，从其中找到所有的可能是安装完成的插件。在这里的判断条件有两个，第一是apk目录下必须存在对应的apk文件，第二个点是该插件的目录下除了apk目录之外应该还有其他的文件目录存在。额外增加第二点判断是因为在插件卸载之后仍然会把apk文件保留在原来的目录下面，如果这个时候不增加第二点判断条件，那么就会错误地将已经卸载的插件当作安装完成的插件进行加载。
 
-### 插件安装/删除/卸载流程
+这里还存在一个没有弄清楚地方就是关于签名文件，包括整个签名文件地获取，保存，使用地意义等等。
+
+### 插件预装载流程
+
+```{puml}
+title 插件预装载流程
+
+start
+if (预装载插件类型) then (Local)
+	: 使用对应APK文件创建对应的Plugin;
+	if (Plugin == null) then (yeas)
+		: 本地预加载错误;
+		: return null;
+	else (no)
+		: 根据获取的Plugin从缓存中获取PlugInfo;
+		if (PlugInfo == null) then (yeas)
+			: 创建新的PlugInfo;
+			: 保存到本地缓存中;
+			: 执行PlugInfo的预加载操作;
+		else (no)
+			: 使用缓存中获取的PlugInfo执行预加载操作;
+		endif
+	endif
+else (Remote)
+	: 尝试从缓存中获取PlugInfo;
+	if (PlugInfo == null)	then (yeas)
+		: 从缓存中获取对应地Plugin;
+		if (Plugin == null) then (yeas)
+			: 预加载错误;
+		else (no)
+			: 使用Plugin创建对应地PlugInfo;
+			: 保存PlugInfo到缓存中;
+			: 执行PlugInfo的预加载操作;
+		endif
+	else (no)
+		: 执行PlugInfo的预加载操作;
+	endif
+endif
+```
+
+关于插件预装载，首要说明的是执行这个过程的意义。在当前系统中存在多个插件，或者是应用希望同时展现出一个可选择使用的插件列表的时候，就需要从插件中获取到用于展示的基本信息。按照和服务器定义的`Plugin`实体的配置信息本来是可以完成这个工作，但是最开始没有注意到这一部分的内容，而且也要兼容到本地插件的预装载信息。所以在这里采用的方案是直接对插件的APK文件进行解析，目的是为了获取到插件的`应用名称\应用图标`用于插件列表的展示。这部分的实在操作封装在`PlugInfo`中，关键代码如下:
+
+```java
+PackageManager pm = context.getPackageManager();
+PackageInfo pi = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), 0);
+if (pi == null){
+    Log.e(TAG, "doPreLoad can not get PackageInfo for apk: " + apkFile.getAbsolutePath());
+    return false;
+}
+pi.applicationInfo.sourceDir = apkFile.getAbsolutePath();
+pi.applicationInfo.publicSourceDir = apkFile.getAbsolutePath();
+label = (String) pi.applicationInfo.loadLabel(pm);
+icon = pi.applicationInfo.loadIcon(pm);
+pluginStatus = STATUS.PRELOADED;
+```
+
+代码的核心部分是尝试获取当前APK文件的`PackageInfo`，如果这个获取操作失败就直接判定当前的APK文件是不可用的，成功获取之后就可以直接从其中获取需要的内容。
+
+### 插件安装流程
+
+插件的安装虽然会有本地插件安装和远端服务器配置插件安装两种流程，但其实两种方式不同点仅仅在于本地插件安装的时候，最开始本地插件是不存在与之对应的`Plugin`信息的，在这个方面的缺陷就需要手动的从该插件构建出对应的`Plugin`并切保存到本地配置文件中。在Plugin创建完成之后，两种不同类型的插件安装过程实际上就合并到了同样的一条操作路径中。所以在介绍关于插件安装的过程时分成两个部分的内容，第一个是为本地插件创建对应`Plugin`的过程；第二个则是`PlugInfo`作为起点的插件安装路径。
+
+```{puml}
+title 本地插件创建Plugin流程
+
+participant PluginConfigManager
+participant Context
+participant PackageManager
+participant Plugin
+
+[-> PluginConfigManager: getPlugin(originPath, context, replaceFlag)
+activate PluginConfigManager
+PluginConfigManager -> Context: getPackageManager()
+Context --> PluginConfigManager: pm
+PluginConfigManager -> PackageManager: getPackageArchiveInfo(originPath, 0)
+PackageManager --> PluginConfigManager: pi
+note left: can get some information about apk
+PluginConfigManager -> PluginConfigManager: try to get plugin from cache
+alt plugin not in cache
+PluginConfigManager -> Plugin: new Plugin()
+Plugin --> PluginConfigManager: plugin
+PluginConfigManager -> PluginConfigManager: save to cache
+PluginConfigManager -> PluginConfigManager: writeToFile
+note left: save the new plugin to SharePreference
+else plugin in cache
+PluginConfigManager -> PluginConfigManager: return cache plugin
+end
+```
+
+在这个流程中，最基本的条件是可以从`originPath`指定目录下获取到该文件`PackageInfo`。在成功获取到`PackageInfo`之后可以使用对应的包名尝试在缓存中获取到对应`Plugin`对象，当该对象不存在的时候就会尝试使用现有的信息来构建`Plugin`对象。这些现有的填充出来的本地`Plugin`对象应该是下面的这种数据结构:
+
+```javascript
+Plugin {
+	pluginID: LOCAL_ID;
+	url: originPath;
+	enable: true;
+	packageName: packageName
+}
+```
+
+因为该插件信息是从本地生成的，所以配置的是一个统一的LOCAL_ID；然后会在url中保存APK文件原始放置路径；最后packageName则是直接从PackageInfo中解析出来；当然，对于所有的本地插件来说，enable字段都是true值。
+
+只要配置完对应的`Plugin`对象之后，这个流程基本上算是完成了，后面只需要把新生成的对象保存到合适的位置。但是上面的流程图中对于`replaceFlag`参数的时候并没有表述出来，在这里需要做一个补充说明。因为考虑到本地插件不能够向远端服务器下载的插件那样可以通过插件的ID和版本号来进行更新操作，所以在开这个接口的时候留下了一个`replaceFlag`参数来配置在缓存中已经存在对应包名插件的时候采取怎样的操作，可以是直接返回不替代也可以删除旧的插件采用替代的方式导入新的插件。
+
+在完成本地插件信息获取过程分析之后，现在来介绍插件的具体安装过程。
+
+```{puml}
+title 插件安装流程
+
+participant IPluginManagerImpl
+participant Context
+participant PackageManager
+participant PluginPackageParser
+participant BaseActivityManagerService
+
+[-> IPluginManagerImpl: installPlugin(pluginFile)
+activate IPluginManagerImpl
+IPluginManagerImpl -> Context: getPackageManager()
+Context --> IPluginManagerImpl: pm
+IPluginManagerImpl -> PackageManager: getPackageArchiveInfo(pluginFile, 0)
+PackageManager --> IPluginManagerImpl: pi
+IPluginManagerImpl -> IPluginManagerImpl: forceStopPackage(packageName)
+IPluginManagerImpl -> PluginPackageParser: new PluginPackageParser()
+PluginPackageParser --> IPluginManagerImpl: parser
+IPluginManagerImpl -> PluginPackageParser: collectCertification()
+IPluginManagerImpl -> PluginPackageParser: 检查权限是否允许运行
+IPluginManagerImpl -> PluginPackageParser: 获取签名文件
+IPluginManagerImpl -> IPluginManagerImpl: copyNativeLibs(parser)
+IPluginManagerImpl -> IPluginManagerImpl: dexOpt(context, parser)
+IPluginManagerImpl -> IPluginManagerImpl: save parser to cache
+IPluginManagerImpl -> BaseActivityManagerService: onPkgInstalled(parserCache, parser, pkg)
+IPluginManagerImpl -> IPluginManagerImpl: sendInstalledBroadcast(packageName)
+deactivate IPluginManagerImpl
+```
+
+整个插件的安装流程基本上采用的还是`DroidPlugin`原来的那一套，在最开始的部分仍然需要获取到APK文件的包名，然后通过这个包名尝试关闭当前在运行的同包名的插件。关闭同名插件的关键代码如下：
+
+```java
+public boolean killBackgroundProcesses(String pluginPackageName) throws RemoteException {
+	ActivityManager am = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
+	List<RunningAppProcessInfo> infos = am.getRunningAppProcesses();
+	boolean success = false;
+	for (RunningAppProcessInfo info : infos) {
+			if (info.pkgList != null) {
+					String[] pkgListCopy = Arrays.copyOf(info.pkgList, info.pkgList.length);
+					Arrays.sort(pkgListCopy);
+					if (Arrays.binarySearch(pkgListCopy, pluginPackageName) >= 0 && info.pid != android.os.Process.myPid()) {
+							Log.i(TAG, "killBackgroundProcesses(%s),pkgList=%s,pid=%s", pluginPackageName, Arrays.toString(info.pkgList), info.pid);
+							android.os.Process.killProcess(info.pid);
+							success = true;
+					}
+			}
+	}
+	return success;
+}
+```
+
+上面的代码遍历了正在运行的进程并通过匹配插件的包名来确定需要关掉的进程来达到停止正在运行的同名插件的目的。
+
+在准备上面的准备工作完成之后，会去创建在插件安装工程中的一个关键类`PluginPackageParser`，整个插件的的安装工作基本上在这个类的构造函数中就执行的差不多了，而且后续插件使用的过程中也无法避免的要和这个类进行交互。
+
+```{puml}
+class PackageInfo{
+
+}
+
+class PluginPackageParser{
+	- final File mPluginFile
+	- final PackageParser mParser
+	- final String mPackageName
+	- final Context mHostContext
+	- final PackageInfo mHostPackageInfo
+	..
+	1. 在这个类的构造函数过程中，会从创建的
+	PackageParser中获取到关于apk的各种组件
+	的信息
+}
+
+class PackageParser{
+
+}
+
+PluginPackageParser -> PackageParser
+PackageInfo <- PluginPackageParser
+```
+
+```{puml}
+title PluginPackageParser 创建流程
+
+participant PluginPackageParser
+participant PackageParser
+participant ComponentName
+
+[-> PluginPackageParser: new PluginPackageParser(context, pluginFile)
+activate PluginPackageParser
+PluginPackageParser -> PackageParser: newPluginParser(context)
+activate PackageParser
+PackageParser --> PluginPackageParser: mParser
+deactivate PackageParser
+
+== 获取Activity相关信息 ==
+PluginPackageParser -> PackageParser: getActivities()
+activate PackageParser
+activate PluginPackageParser
+PackageParser --> PluginPackageParser: datas
+deactivate PackageParser
+
+group datas.loop
+PluginPackageParser -> ComponentName: new ComponentName(packageName, mParser.readNameFromComponent(data))
+activate ComponentName
+ComponentName --> PluginPackageParser: componentName
+deactivate ComponentName
+
+PluginPackageParser -> PluginPackageParser: mActivityObjCache.put(componentName, data)
+PluginPackageParser -> PackageParser: generateActivityInfo(data, 0)
+activate PackageParser
+PackageParser --> PluginPackageParser: value
+deactivate PackageParser
+PluginPackageParser -> PluginPackageParser: fixApplicationInfo(value.application)
+PluginPackageParser -> PluginPackageParser: mActivityInfoCache.put(componentName, value)
+
+PluginPackageParser -> PackageParser: readIntentFilterFromComponent(data)
+activate PackageParser
+PackageParser --> PluginPackageParser: filters
+deactivate PackageParser
+PluginPackageParser -> PluginPackageParser: mActivityIntentFilterCache.remove(componentName)
+PluginPackageParser -> PluginPackageParser: mactivityintentFilterCache.put(componentName, filters)
+
+end
+
+PluginPackageParser -> PluginPackageParser: decode info from datas
+deactivate PluginPackageParser
+
+== 获取Service相关信息 ==
+|||
+== 获取Provider相关信息 ==
+|||
+== 获取Receivers相关信息 ==
+|||
+== 获取Insturmentation相关信息 ==
+|||
+== 获取Permission相关信息 ==
+
+```
+
+`PluginPackageParser`类主要依赖`PackageParser`类来获取插件的各种相关信息。这些信息的获取操作如上图所示，在`PluginPackageParser`的构造函数中创建完`PackageParser`对象之后就开始执行插件信息获取的操作，其实整个插件的安装工作大部分都是从插件插件中解析出这些信息内容，所以在整个构造函数执行完毕的时候，插件的安装过程已经完成了一大半。因为获取各种信息的操作基本差不多所以在流程图中就采用了比较简略的写法来表述，具体的信息的可以查看相关的代码。在这个流程中还有一个`fixApplicationInfo`函数需要详细看一下:
+
+```java
+private ApplicationInfo fixApplicationInfo(ApplicationInfo applicationInfo) {
+		if (applicationInfo.sourceDir == null) {
+				applicationInfo.sourceDir = mPluginFile.getPath();
+		}
+		if (applicationInfo.publicSourceDir == null) {
+				applicationInfo.publicSourceDir = mPluginFile.getPath();
+		}
+
+		if (applicationInfo.dataDir == null) {
+				applicationInfo.dataDir = PluginDirHelper.getPluginDataDir(getPluginBaseDirName(), mPackageName);
+		}
+
+		try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+						if (FieldUtils.readField(applicationInfo, "scanSourceDir", true) == null) {
+								FieldUtils.writeField(applicationInfo, "scanSourceDir", applicationInfo.dataDir, true);
+						}
+				}
+		} catch (Throwable e) {
+				//Do nothing
+		}
+
+		try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+						if (FieldUtils.readField(applicationInfo, "scanPublicSourceDir", true) == null) {
+								FieldUtils.writeField(applicationInfo, "scanPublicSourceDir", applicationInfo.dataDir, true);
+						}
+				}
+		} catch (Throwable e) {
+				//Do nothing
+		}
+
+		applicationInfo.uid = mHostPackageInfo.applicationInfo.uid;
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+				if (applicationInfo.nativeLibraryDir == null) {
+						applicationInfo.nativeLibraryDir = PluginDirHelper.getPluginNativeLibraryDir(getPluginBaseDirName());
+				}
+		}
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				if (applicationInfo.splitSourceDirs == null) {
+						applicationInfo.splitSourceDirs = new String[]{mPluginFile.getPath()};
+				}
+		}
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				if (applicationInfo.splitPublicSourceDirs == null) {
+						applicationInfo.splitPublicSourceDirs = new String[]{mPluginFile.getPath()};
+				}
+		}
+
+		if (TextUtils.isEmpty(applicationInfo.processName)) {
+				applicationInfo.processName = applicationInfo.packageName;
+		}
+		return applicationInfo;
+}
+```
+
+在构造函数获取插件信息的过程中，会调用该函数对所有组件相对应的`Application`进行设置，在这个设置的过程中，会将`Application`中各种路径参数对应到我们自己插件系统中具体路径。
+
+### 插件实体对应关系
 
 ### 插件运行原理简介
 
