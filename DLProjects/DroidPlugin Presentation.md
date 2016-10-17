@@ -1,11 +1,42 @@
+
+<!-- toc orderedList:0 -->
+
+- [DroidPlugin Manager](#droidplugin-manager)
+- [使用示例](#使用示例)
+- [代码结构](#代码结构)
+- [服务器交互逻辑](#服务器交互逻辑)
+	- [Plugin](#plugin)
+	- [拉取插件信息](#拉取插件信息)
+- [DroidPlugin 关键逻辑](#droidplugin-关键逻辑)
+	- [PluginPackageParser](#pluginpackageparser)
+	- [插件安装流程](#插件安装流程)
+	- [killBackgroundProcesses](#killbackgroundprocesses)
+	- [fixApplicationInfo](#fixapplicationinfo)
+- [开放接口部分关键逻辑](#开放接口部分关键逻辑)
+	- [PlugInfo](#pluginfo)
+	- [预装载插件](#预装载插件)
+	- [安装本地插件](#安装本地插件)
+	- [卸载和删除插件](#卸载和删除插件)
+
+<!-- tocstop -->
+
+
 <!-- slide -->
 # DroidPlugin Manager
 
+- 示例
 - 代码结构
 - 服务器交互逻辑
 - DroidPlugin 关键逻辑
 - 公开接口
 - 使用示例
+
+<!-- slide -->
+# 使用示例
+
+- 依赖
+- 服务器插件配置
+- 本地插件
 
 <!-- slide -->
 # 代码结构
@@ -189,6 +220,44 @@ deactivate IPluginManagerImpl
 ```
 
 <!-- slide -->
+## killBackgroundProcesses
+
+```java
+public boolean killBackgroundProcesses(String pluginPackageName) throws RemoteException {
+	ActivityManager am = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
+	List<RunningAppProcessInfo> infos = am.getRunningAppProcesses();
+	boolean success = false;
+	for (RunningAppProcessInfo info : infos) {
+			if (info.pkgList != null) {
+					String[] pkgListCopy = Arrays.copyOf(info.pkgList, info.pkgList.length);
+					Arrays.sort(pkgListCopy);
+					if (Arrays.binarySearch(pkgListCopy, pluginPackageName) >= 0 && info.pid != android.os.Process.myPid()) {
+							Log.i(TAG, "killBackgroundProcesses(%s),pkgList=%s,pid=%s", pluginPackageName, Arrays.toString(info.pkgList), info.pid);
+							android.os.Process.killProcess(info.pid);
+							success = true;
+					}
+			}
+	}
+	return success;
+}
+```
+
+<!-- slide -->
+## fixApplicationInfo
+
+针对于获取到的每个组件，配置其ApplicationInfo的对应路径
+
+```javascript
+applicationInfo.sourceDir = mPluginFile.getPath();
+applicationInfo.publicSourceDir = mPluginFile.getPath();
+applicationInfo.dataDir = PluginDirHelper.getPluginDataDir(getPluginBaseDirName(), mPackageName);
+applicationInfo.nativeLibraryDir = PluginDirHelper.getPluginNativeLibraryDir(getPluginBaseDirName());
+applicationInfo.splitSourceDirs = new String[]{mPluginFile.getPath()};
+applicationInfo.splitPublicSourceDirs = new String[]{mPluginFile.getPath()};
+applicationInfo.processName = applicationInfo.packageName;
+```
+
+<!-- slide -->
 
 ```{puml}
 hide footbox
@@ -250,10 +319,119 @@ deactivate PluginPackageParser
 ```
 
 <!-- slide -->
-# 开放接口和部分关键逻辑
+# 开放接口部分关键逻辑
 
 - PlugInfo
 - 开放接口
+  - 预装载插件
   - 安装本地插件
-  - 删除插件
-  - 卸载插件
+  - 卸载和删除插件
+
+<!-- slide -->
+## PlugInfo
+
+对于插件在系统中运行状态的管理
+
+```{puml}
+class PlugInfo{
+
+}
+
+class Plugin{
+
+}
+
+enum STATUS {
+  NONE
+  PRELOADED
+  INSTALLED
+  RUNNING
+}
+
+PlugInfo -> STATUS
+PlugInfo --> Plugin
+```
+
+<!-- slide -->
+
+## 预装载插件
+
+- 为了在创建为安装之前快速的获取插件信息用于显示
+
+- 预装载的过程对于本地插件和服务器配置插件来说差别仅仅在于本地插件需要自行创建对应的`Plugin`而服务器配置插件不需要。所以将预装载流程分成`Plugin`获取和预装载信息获取两个部分
+
+<!-- slide -->
+
+```{puml}
+title 本地插件创建Plugin流程
+
+participant PluginConfigManager
+participant Context
+participant PackageManager
+participant Plugin
+
+[-> PluginConfigManager: getPlugin(originPath, context, replaceFlag)
+activate PluginConfigManager
+PluginConfigManager -> Context: getPackageManager()
+Context --> PluginConfigManager: pm
+PluginConfigManager -> PackageManager: getPackageArchiveInfo(originPath, 0)
+PackageManager --> PluginConfigManager: pi
+note left: can get some information about apk
+PluginConfigManager -> PluginConfigManager: try to get plugin from cache
+alt plugin not in cache
+PluginConfigManager -> Plugin: new Plugin()
+Plugin --> PluginConfigManager: plugin
+PluginConfigManager -> PluginConfigManager: save to cache
+PluginConfigManager -> PluginConfigManager: writeToFile
+note left: save the new plugin to SharePreference
+else plugin in cache
+PluginConfigManager -> PluginConfigManager: return cache plugin
+end
+```
+
+<!-- slide -->
+预装载操作的关键代码
+
+```java
+PackageManager pm = context.getPackageManager();
+PackageInfo pi = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), 0);
+if (pi == null){
+    Log.e(TAG, "doPreLoad can not get PackageInfo for apk: " + apkFile.getAbsolutePath());
+    return false;
+}
+pi.applicationInfo.sourceDir = apkFile.getAbsolutePath();
+pi.applicationInfo.publicSourceDir = apkFile.getAbsolutePath();
+label = (String) pi.applicationInfo.loadLabel(pm);
+icon = pi.applicationInfo.loadIcon(pm);
+pluginStatus = STATUS.PRELOADED;
+```
+
+<!-- slide -->
+## 安装本地插件
+
+插件安装操作和预加载的类似，同样存在本地插件和服务器配置插件的差别，并且这些差别都是体现在`Plugin`的获取方式上。在获取完全本地插件对应的`Plugin`对象之后采用于上面介绍的安装流程相同。
+
+<!-- slide -->
+## 卸载和删除插件
+
+卸载和删除插件的过程本质上是对插件相关的删除操作。两者之间的区别在于卸载插件仅仅是删除插件安装过程解析到本地存储的内容同时将插件的运行状态恢复到正确的位置；而对于插件的删除操作来说，插件在当前应用程序中所有的数据都已经是无用的，所以都不会得到保留。
+
+```{viz}
+digraph deleteAnduninstall {
+  // 定义节点
+  node[shape = box, style = dashed, color = blue];
+  unisntall[label = unisntall];
+  delete[label = delete];
+  node[shape = folder, color = red];
+  SharePreference[label = SharePreference];
+  PluginDir[label = PluginDir];
+  node[shape = cds, color = green];
+  Plugin[label = Plugin];
+  PlugInfo[label = PlugInfo];
+  PluginPackageParser[label = PluginPackageParser];
+
+  // 关系
+  unisntall -> {PluginDir PluginPackageParser}[color = slategrey, style = dashed];
+  delete -> {SharePreference PluginDir Plugin PlugInfo PluginPackageParser}[color = purple];
+}
+```
