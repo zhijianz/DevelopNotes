@@ -3,6 +3,7 @@
 
 - [DroidPlugin Manager](#droidplugin-manager)
 - [使用示例](#使用示例)
+	- [关键接口调用](#关键接口调用)
 - [代码结构](#代码结构)
 - [服务器交互逻辑](#服务器交互逻辑)
 	- [Plugin](#plugin)
@@ -17,6 +18,7 @@
 	- [预装载插件](#预装载插件)
 	- [安装本地插件](#安装本地插件)
 	- [卸载和删除插件](#卸载和删除插件)
+- [END](#end)
 
 <!-- tocstop -->
 
@@ -29,7 +31,6 @@
 - 服务器交互逻辑
 - DroidPlugin 关键逻辑
 - 公开接口
-- 使用示例
 
 <!-- slide -->
 # 使用示例
@@ -37,11 +38,25 @@
 - 依赖
 - 服务器插件配置
 - 本地插件
+- 关键接口调用
+
+<!-- slide -->
+## 关键接口调用
+
+1. 使用`PluginApplication`或者调用下面两个函数初始化DroidPlugin
+```java
+1. PluginHelper.getInstance().applicationOnCreate(this);
+2. PluginHelper.getInstance().applicationAttachBaseContext(base);
+```
+
+2. 调用`DroidPlugin.init(context, appId, appVer, market, uid)`执行插件管理系统的出事操作
+
+3. 调用对应`API`完成响应插件操作
 
 <!-- slide -->
 # 代码结构
 ```{puml}
-package "Plugin Sever Controll" {
+package "Plugin Server Logic" {
   class PluginDownloadManager
   class PluginConfigManager
   class Plugin
@@ -53,7 +68,7 @@ package "Open API"{
 }
 ```
 ```{puml}
-package "DroidPlugin logic"{
+package "DroidPlugin Logic"{
   class PluginManager
   class IPluginManagerImpl
   class PluginPackageParser  
@@ -157,7 +172,7 @@ else (no)
 
 - PluginPackageParser
 - 插件安装过程
-- 插件启动替换过程
+<!-- - 插件启动替换过程 -->
 
 <!-- slide -->
 ## PluginPackageParser
@@ -432,6 +447,12 @@ digraph deleteAnduninstall {
 
   // 关系
   unisntall -> {PluginDir PluginPackageParser}[color = slategrey, style = dashed];
-  delete -> {SharePreference PluginDir Plugin PlugInfo PluginPackageParser}[color = purple];
+  delete -> {SharePreference PluginDir Plugin PlugInfo PluginPackageParser}[color = purple, style = dashed];
 }
 ```
+
+<!-- slide -->
+
+# END
+
+Thanks for watching
