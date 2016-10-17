@@ -1,3 +1,17 @@
+
+
+<!-- toc orderedList:0 -->
+
+- [关键类](#关键类)
+- [关键过程](#关键过程)
+	- [install 流程](#install-流程)
+	- [多线程流程](#多线程流程)
+	- [Activity 启动流程](#activity-启动流程)
+	- [Storage System](#storage-system)
+	- [留白](#留白)
+
+<!-- tocstop -->
+
 # 关键类
 
 ```{puml}
@@ -28,7 +42,9 @@ PluginPackageParser -> PackageParser
 
 1. 从`IPackageManagerImpl.mPluginCache`的定义可以看出来，插件的构建过程依赖于关键类`PluginPackageParser`
 
+
 # 关键过程
+
 
 ## install 流程
 
