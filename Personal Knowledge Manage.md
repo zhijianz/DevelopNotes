@@ -27,7 +27,6 @@ digraph g {
   current[label = 当前面对的情况];
   problem1[label = 碎片化知识，无成体系的学习框架];
   problem2[label = 需要高效转化成技术实例];
-  problem3[label = s]
 
   // 定义关系
   current -> problem1;
