@@ -49,22 +49,56 @@
 需要使用到插件管理系统的功能，首先需要去添加管理系统的依赖，然后是执行管理系统的初始化操作。
 
 [项目在公司仓库的地址](http://repo.yypm.com:8181/nexus/index.html#nexus-search;quick~pluginmgr)
-添加管理系统的依赖，对于`Maven`构建的项目来说可以直接使用公司仓库中提供的`Maven`依赖配置对构建出来的`aar`进行依赖，同时需要在主模块的`POM文件`中增加如下的配置来将管理系统中创建的`AndroidManifest`文件进行合并操作。
+
+添加管理系统的依赖，对于`Maven`构建的项目来说可以直接使用公司仓库中提供的`Maven`依赖配置对构建出来的`aar`进行依赖。但是因为在管理系统中预先注册了用于插件运行使用的各种组件信息和权限，所以需要在主模块的`POM文件`中增加如下的配置来将管理系统中创建的`AndroidManifest`文件进行合并操作。
 
 ```xml
 <build>
 	<pluginManager>
-		<plugins>
-			<plugin>
-        <groupId>com.jayway.maven.plugins.android.generation2</groupId>
-        <artifactId>android-maven-plugin</artifactId>
-        <configuration>
-          <mergeManifests>true</mergeManifests>
-        </configuration>
-      </plugin>
-		</plugins>
+			<plugins>
+				<plugin>
+					<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+					<artifactId>android-maven-plugin</artifactId>
+					<configuration>
+						<!-- add the following mergeManifests option -->
+						<mergeManifests>true</mergeManifests>
+					</configuration>
+				</plugin>
+			</plugins>
 	<PluginManager>
 </build>
+```
+
+对于使用`Gradle`构建的项目，则需要在公司仓库中手动下载构建出来的`aar`然后进行本地以来，因为`Gradle`构建的脚本默认只是了`mergeManifests`操作，所以这里不需要增加额外的配置。
+
+在依赖添加完成之后，需要再宿主程序合适的位置调用api进行插件管理系统的初始化操作。这部分的初始化分成`DroidPlugin初始化`和`管理系统初始化`两个部分。
+
+`DroidPlugin初始化`依然沿用原有的代码，可选择在宿主程序中使用管理系统中提供的`PluginApplication`，也可以在合适的位置调用下面的两个接口
+
+```java
+// 在宿主程序application.onCreate中调用
+PluginHelper.getInstance().applicationOnCreate(Context context)
+
+// 在宿主程序application.attachBaseContext中调用
+PluginHelper.getInstance().applicationAttachBaseContext(Context context)
+```
+
+`管理系统初始化`需要调用下面的结果来完成
+
+```java
+/**
+ * @param appId 宿主程序ID
+ * @param appver 宿主程序版本
+ * @param market 宿主程序的市场渠道
+ * @param uid 当前用户的uid
+ */
+DroidPlugin.init(Context context, int appId, String appVer, String market, String uid)
+```
+
+在调用上面的接口进行初始化操作的同时，也会向服务器发送请求获取对应的插件配置来更新当前系统的插件内容。除了在初始化的时候直接向服务器请求插件信息之前，还预留了下面的接口专门来执行插件信息的查询工作。
+
+```java
+DrodiPlugin.instance().queryPlugin(int appId, String appVer, String market, String uid)
 ```
 
 ## 插件服务器配置
@@ -145,14 +179,70 @@ DroidPluginManager.instance().preLoadPluginFromPath(PLUGINS_PATH);
 1. DroidPluginManager.instance().installPlugin(String packageName)
 2. DroidPluginManager.instance().installPluginFromPath(String path);
 ```
+
 插件安装完成之后，该插件运行时需要用的信息已经被解析到当前系统中，此时插件已经处于一个可以运行的状态。
 
 ## 运行插件
 
+在插件安装完成之后，可以在需要的使用调用下面的接口运行指定的插件完成对应的功能
+
+```java
+DroidPluginManager.instance().startPlugin(String packageName)
+```
+
+传入的参数是对应插件的包名，这个接口内容执行的也是一个常规启动流程
+
+```java
+PackageManager pm = context.getPackageManager();
+Intent intent = pm.getLaunchIntentForPackage(packageName);
+intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+context.startActivity(intent);
+```
+
 ## 插件的运行状态
+
+插件在使用的过程中会存在不同的状态，这些状态都统一封装在了插件对应的`PlugInfo`对象中。
+
+```java
+enum STATUS{
+	NONE, // 插件创建初始状态
+	PRELOAD, // 插件预装载之后的状态
+	INSTALLED, // 插件安装之后的状态
+	RUNNING // 插件正在运行中
+}
+```
 
 ## 卸载与删除插件
 
+插件使用一段时间之后，可能就会被弃用，系统提供了两种不同类型对插件弃用的操作。第一种类型是卸载插件，卸载操作会将插件的安装信息进行删除而保留下来一下基本信息，这个功能针对于当前用户不希望再使用该插件的功能但仍然希望将该插件保留再自己的插件列表中当再次需要使用的时候再进行安装，省去查找和下载插件的麻烦；第二种类型是将该插件完全的从当前系统中清除干净。在删除操作执行完成之后，该插件在系统中存在的所有信息都会被清除干净。
+
+```java
+// 卸载插件
+DroidPluginManager.instance().uninstallPlugin(String packageName)
+
+// 删除插件
+DroidPluginManager.instance().deletePlugin(String packageName)
+```
+
+```{viz}
+digraph deleteAnduninstall {
+  // 定义节点
+  node[shape = box, style = dashed, color = blue];
+  unisntall[label = unisntall];
+  delete[label = delete];
+  node[shape = folder, color = red];
+  SharePreference[label = SharePreference];
+  PluginDir[label = PluginDir];
+  node[shape = cds, color = green];
+  Plugin[label = Plugin];
+  PlugInfo[label = PlugInfo];
+  PluginPackageParser[label = PluginPackageParser];
+
+  // 关系
+  unisntall -> {PluginDir PluginPackageParser}[color = slategrey, style = dashed];
+  delete -> {SharePreference PluginDir Plugin PlugInfo PluginPackageParser}[color = purple, style = dashed];
+}
+```
 
 # 源代码分析
 

@@ -455,4 +455,4 @@ digraph deleteAnduninstall {
 
 # END
 
-Thanks for watching
+Thanks for watching :)
