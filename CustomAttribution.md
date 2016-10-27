@@ -125,3 +125,81 @@ public View inflate(XmlPullParser parser, ViewGroup root, boolean attachToRoot){
 #### `View(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes)`
 
 直接跳到四参是因为相比于三参只是多了最后的`int defStyleRes`，通常在三参内部直接将四参最后一个参数设置为0然后调用是一样的效果。三参四参的构造函数对于自定义控件来说系统并不会在创建的时候自动调用，通常是在合适的位置手动调用或者是实现的基类的构造函数有调用。后两个参数指代的内容会在下一个小结的时候进行介绍。
+
+### `Context.obtainStyledAttributes`
+
+使用自定义属性的最后一步是在Java逻辑代码中获取到在各个地方配置到的属性值，通常会用到下面这段代码：
+
+```java
+TypedArray a = context.obtainStyledAttributes(set, attrs, defStyleAttr, defStyleRes);
+
+// 调用获取资源的各种接口
+
+a.recycle();
+```
+
+在上面的流程中，所有对于属性值的获取都是基于`TypedArray`对象进行的。在`TypedArray`中保存了希望访问的属性在特定属性集合中的属性。这句话里面有两个关键点，第一点是希望访问的属性集合如何去指定，第二个问题是怎么样去配置特定的属性集合。要解答上面的两个问题，首先需要去分析`TypedArray`的获取过程，也就是`context.obtainStyledAttributes`函数到底做了些什么事情。首先看一下这个函数在源代码中的注解：
+
+```java
+/**
+* @param set The base set of attribute values.  May be null.
+* @param attrs The desired attributes to be retrieved.
+* @param defStyleAttr An attribute in the current theme that contains a
+*                     reference to a style resource that supplies
+*                     defaults values for the TypedArray.  Can be
+*                     0 to not look for defaults.
+* @param defStyleRes A resource identifier of a style resource that
+*                    supplies default values for the TypedArray,
+*                    used only if defStyleAttr is 0 or can not be found
+*                    in the theme.  Can be 0 to not look for defaults.
+*
+*/
+
+public TypedArray obtainStyledAttributes(AttributeSet set, @StyleableRes int[] attrs, @AttrRes int defStyleAttr, @StyleRes int defStyleRes)
+
+```
+
+上面截取了对于函数四个参数说明部分的注解，根据这些注解可以尝试对参数的意义和作用进行试探性的理解
+
+- `AttributeSet set`
+
+  `set`保存的是特定的基础属性集合，在介绍`View`构造函数的时候已经解释过它的来源，它来资源对于定义控件的布局文件的解析。这个参数可以是`null`，这个时候表示会使用当前系统`theme`中定义的属性集合作为基础属性集。
+
+- `int[] attrs`
+
+  `attrs`是我们尝试去检索的属性集合。这个数组的创建方式可以是直接创建一个`int[]`然后在其中填入特定的属性ID，或者是直接使用定义好的`styleable`属性。
+
+- `int defStyleAttr`
+
+  `defStyleAttr`是定义在`theme`中的一个引用类型的属性，这个属性指向的是一个样式表，在这个样式表定义的属性值可以作为将要检索的属性默认值，如果在这个地方填入的参数是`0`那就表示不会去搜索任何一个属性来完成这个功能。
+
+- `int defStyleRes`
+
+  `defStyleRes`指向的是一个样式表，当`defStyleAttr`为0或者无法在当前主题中找到需要检索的属性时会尝试使用这个样式表的内容作为属性的值，同时如果这个值指定为`0`也是代表不使用这个特性。
+
+在对于上面四个参数的意义和作用进行分析之后，大体上可以将通过`TypedArray`来获取特定属性集合值的方式概括成下面的图例：
+
+```{viz}
+digraph fectch_attr{
+  edge[style = dashed, color = slategrey, penwidth = .7];
+  node[shape = cds, style = dashed, color = red];
+  layout[label  = layout];
+  defStyleAttr[label = defStyleAttr];
+  defStyleRes[label = defStyleRes];
+  theme[label = theme];
+  node[color = green, shape = box];
+  attrs[label = attrs];
+  node[color = purple]
+  TypedArray[label = TypedArray];
+  node[shape = line, color = transparent];
+  id[label = attr_id];
+  value[label = attr_value];
+
+  {rankdir = TB;}
+  {layout defStyleAttr defStyleRes theme} -> attrs;
+  attrs -> TypedArray;
+  id -> TypedArray -> value;
+  {rankdir = LR; rank = same; id TypedArray value}
+}
+
+```
