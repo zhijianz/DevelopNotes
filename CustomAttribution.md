@@ -195,11 +195,106 @@ digraph fectch_attr{
   id[label = attr_id];
   value[label = attr_value];
 
-  {rankdir = TB;}
+  rankdir = LR;
   {layout defStyleAttr defStyleRes theme} -> attrs;
   attrs -> TypedArray;
   id -> TypedArray -> value;
   {rankdir = LR; rank = same; id TypedArray value}
 }
 
+```
+
+再使用这个函数的时候，不同的属性集合来源通过`attrs`目标集合过滤之后生成对应的`TypedArray`，然后通过属性的ID从这个对象里面获取到属性的对应值。
+
+下面用一个示例来对上面不同的属性集合做一个具体的介绍。
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="CustomView">
+        <attr name="attr_1" format="string"/>
+    </declare-styleable>
+
+    <attr name="CustomViewStyle" format="reference"/>
+</resources>
+```
+
+上面的代码再`attrs.xml`文件总定义用于测试的属性`attr_1`，而另外一个属性`CustomViewStyle`会再`theme`中进行引用来指代`defStyleAttr`。
+
+```xml
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="CustomViewStyle">@style/CustomViewTheme</item>
+        <item name="attr_1">From Theme</item>
+    </style>
+
+    <style name="CustomViewTheme">
+        <item name="attr_1">From Theme.attr</item>
+    </style>
+
+    <style name="CustomViewDefault">
+        <item name="attr_1">From Style</item>
+    </style>
+
+</resources>
+
+```
+
+上面是`styles.xml`中的代码，在这个代码中有三个地方需要说明。首先，在`theme`中为用于测试的`attr_1`属性赋特定值用来观测属性值的来源；然后在`theme`中使用`CustomViewStyle`属性作为`defStyleAttr`；最后定义一个`CustomViewDefault`样式表作为`defStyleRes`。
+
+```xml
+<?xml version="2.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/activity_main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <com.example.zhijianz.democustomattr.CustomView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:attr_1="From Layout"/>
+</LinearLayout>
+
+```
+
+最后在布局文件中直接为`attr_1`属性设置特定值，这样上面图例中提及到的所有属性集合的来源就都具备了。
+
+在自定义控件中使用如下的代码测试不同情况的属性值获取状态。
+
+```java
+
+// 1. 直接使用控件构造函数出入的AttributeSet
+TypedArray a = context.obtainStyledAttributes(set, R.styleable.CustomView, 0, 0);
+String content = a.getString(R.styleable.CustomView_attr_1);    // content: From Layout
+
+// 2. 使用Null作为参数
+TypedArray a = context.obtainStyledAttributes(null, R.styleable.CustomView, 0, 0);
+String content = a.getString(R.styleable.CustomView_attr_1);    // content: From Theme
+
+// 3. 使用set的同时使用defStyleAttr和defStyleRes
+TypedArray a = context.obtainStyledAttributes(set, R.styleable.CustomView, R.attr.CustomViewStyle, R.style.CustomViewDefault);
+String content = a.getString(R.styleable.CustomView_attr_1);    // content: From Layout
+
+// 4. 使用null的同时使用后两个参数
+TypedArray a = context.obtainStyledAttributes(null, R.styleable.CustomView, R.attr.CustomViewStyle, R.style.CustomViewDefault);
+String content = a.getString(R.styleable.CustomView_attr_1);    // content: From Theme.attr
+
+// 5. 使用null的时候使用defStyleRes参数
+TypedArray a = context.obtainStyledAttributes(null, R.styleable.CustomView, 0, R.style.CustomViewDefault);
+String content = a.getString(R.styleable.CustomView_attr_1);    // content: From Style
+```
+
+所以从上面代码执行的结果可以分析出来，不同的属性集合在同时覆盖定义一个属性的时候，优先级遵循下面的一个顺序：
+
+```java
+Layout > defStyleAttr > defStyleRes > Theme
 ```
